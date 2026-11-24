@@ -782,7 +782,15 @@ extern int const AbstractSessionDefaultTimeoutForAsynchronousMessagesInTransmit;
     if ([session isFFmpeg]) {
       dispatch_async(asyncDispatchQueue, ^{
         [FFmpegKitConfig ffmpegExecute:(FFmpegSession*)session];
-        result(nil);
+        // The outcome travels with the execute result, so callers never have to look
+        // the session up again in the bounded session history (it may be evicted).
+        ReturnCode* returnCode = [session getReturnCode];
+        result(@{
+          @"sessionId": [NSNumber numberWithLong:[session getSessionId]],
+          @"state": [FFmpegKitFlutterPlugin sessionStateToNumber:[session getState]],
+          @"returnCode": returnCode == nil ? [NSNull null] : [NSNumber numberWithInt:[returnCode getValue]],
+          @"failStackTrace": [session getFailStackTrace] ?: [NSNull null]
+        });
       });
     } else {
       result([FlutterError errorWithCode:@"NOT_FFMPEG_SESSION" message:@"A session is found but it does not have the correct type." details:nil]);
